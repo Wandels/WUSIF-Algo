@@ -7,15 +7,11 @@ from alpaca.trading.enums import OrderSide, TimeInForce
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Access the variables
 polygon_api_key = os.getenv("POLYGON_APIKEY_MEMBER")
 alpaca_api_key = os.getenv("ALPACA_APIKEY")
 alpaca_secret_key = os.getenv("ALPACA_APIKEY_SECRET")
 alpaca_base_url = os.getenv("ALPACA_API_BASE_URL")
- 
 
-# Define your trading symbol
 
 polygon_client = RESTClient(api_key=polygon_api_key)
 #alpaca_client = TradingClient(os.getenv("APCA_API_KEY_ID"), os.getenv("APCA_API_SECRET_KEY"), paper=True)
@@ -23,7 +19,7 @@ alpaca_client = TradingClient(alpaca_api_key, alpaca_secret_key, paper=True)
 
 symbol = "AAPL"
 
-# Function to fetch the latest price
+
 def get_latest_price(symbol):
     last_trade = polygon_client.get_last_trade(symbol)
     return last_trade.price
