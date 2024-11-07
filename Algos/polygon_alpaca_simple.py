@@ -4,8 +4,6 @@ from polygon import RESTClient as PolygonClient
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
-
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
