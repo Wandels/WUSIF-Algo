@@ -6,6 +6,7 @@ from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 import os
 import time
+import requests
 
 load_dotenv()
 
@@ -109,6 +110,8 @@ def execute_trade(symbol, side, price=None, live_mode=False):
         )
         alpaca_client.submit_order(order_data)
         print(f"Live order placed: {side} {TRADE_QUANTITY} shares of {symbol}")
+        requests.post("https://ntfy.sh/wusif-algo-momentum",
+            data=f"Live order placed: {side} {TRADE_QUANTITY} shares of {symbol}" .encode(encoding='utf-8'))
     else:
         # In backtest, simply track the transaction
         print(f"Backtest trade: {side} {TRADE_QUANTITY} shares of {symbol} at price {price}")
