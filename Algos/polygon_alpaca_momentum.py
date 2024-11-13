@@ -26,9 +26,35 @@ TRADE_QUANTITY = 10
 START_CAPITAL = 100000
 
 # ---- Data Fetching ----
-def fetch_full_historical_data(symbol, start_date, end_date):
-    bars = polygon_client.get_aggs(symbol, 1, "day", start_date, end_date)
-    return {datetime.fromtimestamp(bar.timestamp / 1000).date(): bar.close for bar in bars}
+# Define timespan classifications
+polygon_timespan = {
+    "second": "intraday",
+    "minute": "intraday",
+    "hour": "intraday",
+    "day": "daily",
+    "week": "daily",
+    "month": "daily",
+    "quarter": "daily",
+    "year": "daily"
+}
+
+
+
+def fetch_full_historical_data(symbol, start_date, end_date, interval):
+    """
+    Fetch historical data from Polygon based on the specified interval.
+    Uses `polygon_timespan` to determine if data should be processed as intraday or daily.
+    """
+    #add multiplier in
+    bars = polygon_client.get_aggs(symbol, 1, interval, start_date, end_date)
+    
+    if polygon_timespan[interval] == "daily":
+        # For daily data, store by date
+        return {datetime.fromtimestamp(bar.timestamp / 1000).date(): bar.close for bar in bars}
+    else:
+        # For intraday data, keep the exact timestamp
+        return {datetime.fromtimestamp(bar.timestamp / 1000): bar.close for bar in bars}
+
 
 def fetch_live_price(symbol):
     last_trade = polygon_client.get_last_trade(symbol)
@@ -120,8 +146,8 @@ def execute_trade(symbol, side, price=None, live_mode=False):
 def backtest_strategy():
     portfolio_value = START_CAPITAL  
     positions = {symbol: 0 for symbol in STOCK_UNIVERSE}
-    stock_data = {symbol: fetch_full_historical_data(symbol, START_DATE, END_DATE) for symbol in STOCK_UNIVERSE}
-    
+    stock_data = {symbol: fetch_full_historical_data(symbol, START_DATE, END_DATE, INTERVAL) for symbol in STOCK_UNIVERSE}
+    print(stock_data[STOCK_UNIVERSE[0]])
     for current_date in sorted(stock_data[STOCK_UNIVERSE[0]].keys()):
         signals = generate_signals(stock_data, current_date)
         for symbol, action in signals.items():
@@ -146,7 +172,7 @@ def live_trading_strategy():
     while True:
         stock_data = {}
         for symbol in STOCK_UNIVERSE:
-            historical_data = fetch_full_historical_data(symbol, datetime.now() - timedelta(days=LOOKBACK_PERIOD + 5), datetime.now())
+            historical_data = fetch_intraday_data(symbol, datetime.now() - timedelta(days=LOOKBACK_PERIOD + 5), datetime.now())
             stock_data[symbol] = historical_data
 
         signals = generate_signals(stock_data, datetime.now().date(), live_mode=True)
@@ -160,9 +186,10 @@ def live_trading_strategy():
 
 # ---- Run Strategy ----
 if __name__ == "__main__":
-    START_DATE = datetime(2018, 1, 1)
+    START_DATE = datetime(2024, 1, 1)
     END_DATE = datetime(2024, 11, 23)
-    # backtest_strategy()  # Run backtest
+    INTERVAL = "min"
+    backtest_strategy()  # Run backtest
 
     # Uncomment the line below to start live trading
-    live_trading_strategy()
+    #live_trading_strategy()
