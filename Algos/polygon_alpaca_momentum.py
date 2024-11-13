@@ -33,31 +33,68 @@ def fetch_live_price(symbol):
     last_trade = polygon_client.get_last_trade(symbol)
     return last_trade.price
 
+def fetch_intraday_data(symbol, interval="minute", limit=20):
+    """Fetches recent intraday data for live momentum calculation."""
+    bars = polygon_client.get_aggs(symbol, 15, interval, limit=limit)
+    return [bar.close for bar in bars]
+
 # ---- Momentum Calculation ----
-def calculate_momentum(prices, current_date):
-    trading_dates = sorted([date for date in prices.keys() if date < current_date])
-    if len(trading_dates) < LOOKBACK_PERIOD:
-        return None
+# def calculate_momentum(prices, current_date):
+#     trading_dates = sorted([date for date in prices.keys() if date < current_date])
+#     if len(trading_dates) < LOOKBACK_PERIOD:
+#         return None
     
-    lookback_start_date = trading_dates[-LOOKBACK_PERIOD]
-    lookback_prices = [prices[date] for date in trading_dates if lookback_start_date <= date < current_date]
-    if len(lookback_prices) < LOOKBACK_PERIOD:
-        return None
+#     lookback_start_date = trading_dates[-LOOKBACK_PERIOD]
+#     lookback_prices = [prices[date] for date in trading_dates if lookback_start_date <= date < current_date]
+#     if len(lookback_prices) < LOOKBACK_PERIOD:
+#         return None
     
-    return (lookback_prices[-1] - lookback_prices[0]) / lookback_prices[0]
+#     return (lookback_prices[-1] - lookback_prices[0]) / lookback_prices[0]
+def calculate_momentum(prices, current_date, live_mode=False):
+    if live_mode:
+        # Use intraday prices in live mode
+        if len(prices) < LOOKBACK_PERIOD:
+            return None  # Not enough data for intraday momentum
+        return (prices[-1] - prices[0]) / prices[0]
+    else:
+        # Use daily prices in backtesting mode
+        trading_dates = sorted([date for date in prices.keys() if date < current_date])
+        if len(trading_dates) < LOOKBACK_PERIOD:
+            return None
+
+        lookback_start_date = trading_dates[-LOOKBACK_PERIOD]
+        lookback_prices = [prices[date] for date in trading_dates if lookback_start_date <= date < current_date]
+        if len(lookback_prices) < LOOKBACK_PERIOD:
+            return None
+
+        return (lookback_prices[-1] - lookback_prices[0]) / lookback_prices[0]
 
 # ---- Signal Generation ----
+# def generate_signals(stock_data, current_date, live_mode=False):
+#     signals = {}
+#     for symbol, prices in stock_data.items():
+#         if not live_mode and current_date not in prices:
+#             continue
+#         momentum = calculate_momentum(prices, current_date)
+#         if momentum is not None:
+#             if momentum > BUY_THRESHOLD:
+#                 signals[symbol] = OrderSide.BUY
+#             elif momentum < SELL_THRESHOLD:
+#                 signals[symbol] = OrderSide.SELL
+#     return signals
 def generate_signals(stock_data, current_date, live_mode=False):
     signals = {}
     for symbol, prices in stock_data.items():
         if not live_mode and current_date not in prices:
             continue
-        momentum = calculate_momentum(prices, current_date)
+        momentum = calculate_momentum(prices, current_date, live_mode=live_mode)
         if momentum is not None:
             if momentum > BUY_THRESHOLD:
                 signals[symbol] = OrderSide.BUY
             elif momentum < SELL_THRESHOLD:
                 signals[symbol] = OrderSide.SELL
+        else:
+            print(f"No signal for symbol: {symbol}")
     return signals
 
 # ---- Trade Execution ----
@@ -116,7 +153,7 @@ def live_trading_strategy():
             execute_trade(symbol, action, price, live_mode=True)
 
         print("Waiting for the next trading interval...")
-        time.sleep(60 * 15)  # Run every 15 minutes
+        time.sleep(60 * 1)  # Run every 15 minutes
 
 # ---- Run Strategy ----
 if __name__ == "__main__":
